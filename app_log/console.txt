@@ -1,4 +1,22 @@
-[22-Mar-19 20:58:11] [INFO]) 20:58:11:274254	Client: 109.104.178.163 sent data: auth_me:yRo5Gb8OCsIN
-INFO:handler:20:58:11:274254	Client: 109.104.178.163 sent data: auth_me:yRo5Gb8OCsIN
-[22-Mar-19 20:58:11] [INFO]) 20:58:11:287255	Auth - OK: yRo5Gb8OCsINe9NIZMaOjt443hGVSkCJ
-INFO:handler:20:58:11:287255	Auth - OK: yRo5Gb8OCsINe9NIZMaOjt443hGVSkCJ
+('109.104.178.163', 34649)
+----------------------------------------
+Exception happened during processing of request from ('109.104.178.163', 34649)
+Traceback (most recent call last):
+  File "C:\Program Files (x86)\Python3\lib\socketserver.py", line 650, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Program Files (x86)\Python3\lib\socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Program Files (x86)\Python3\lib\socketserver.py", line 718, in __init__
+    self.setup()
+  File "D:/projects/pbserver/core_v2.py", line 17, in setup
+    whitelisted = get_whitelisted()
+  File "D:\projects\pbserver\utils.py", line 38, in get_whitelisted
+    cur.execute("SELECT `keys` FROM whitelist.users")
+  File "C:\Program Files (x86)\Python3\lib\site-packages\mysql\connector\cursor.py", line 559, in execute
+    self._handle_result(self._connection.cmd_query(stmt))
+  File "C:\Program Files (x86)\Python3\lib\site-packages\mysql\connector\connection.py", line 494, in cmd_query
+    result = self._handle_result(self._send_cmd(ServerCmd.QUERY, query))
+  File "C:\Program Files (x86)\Python3\lib\site-packages\mysql\connector\connection.py", line 396, in _handle_result
+    raise errors.get_exception(packet)
+mysql.connector.errors.ProgrammingError: 1146 (42S02): Table 'whitelist.users' doesn't exist
+----------------------------------------

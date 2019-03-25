@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
 import logging
-import re
+import json
 import socketserver
-from utils import get_db, is_valid_key
+from utils import get_whitelisted, is_valid_key, _get_db
 from utils import Logger
 from utils import get_timestring as t_now
-
-HOST = '10.0.1.5'
-PORT = 2512
-
-# BUFFER_SIZE = 1024
+from settings import Settings
 
 
 class ReqHandler(socketserver.StreamRequestHandler):
+    settings = Settings()
+    log = Logger('core').get_log()
     def setup(self):
-        self.BUFFER_SIZE = 1024
-        logger = Logger()
-        self.log = logger.get_log(name='handler')
+        print(self.client_address)
+        addr = self.settings.address
+        whitelisted = get_whitelisted()
+        if whitelisted is None:
+            pass
+        else:
+            self.whitelist = whitelisted
+            print(whitelisted)
 
     def finish(self):
         self.request.close()
 
     def handle(self):
-        msg = self.get_client_msg(self.BUFFER_SIZE)
+        msg = self.get_client_msg(self.settings.buff_size)
         self.log.info(f'{t_now()}Client: {self.client_address[0]} sent data: {msg[:20]}')
 
         if 'auth_me:' in msg:
@@ -31,9 +34,16 @@ class ReqHandler(socketserver.StreamRequestHandler):
                 self.send_client_msg('True')
             else:
                 self.send_client_msg('False')
+        elif '_online:' in msg:
+            return self.send_client_msg('True')
+
 
         self.send_client_msg(msg)
         # self.log.info(f'{t_now()}Server responded to client: {self.client_address[0]}')
+
+    def request_manager(self, req: str):
+        r = json.loads(req)
+
 
     def get_client_msg(self, buff):
         data = self.request.recv(buff)
@@ -44,11 +54,10 @@ class ReqHandler(socketserver.StreamRequestHandler):
         message = bytes(msg, encoding='utf-8')
         resp = self.request.send(message)
 
-
     def auth(self, userkey: str):
         if is_valid_key(userkey):
-            conndb, cur = get_db()
-            cur.execute("SELECT * FROM whitelist.users WHERE users.`keys` = %s", (userkey,))
+            conndb, cur = _get_db()
+
             user = cur.fetchone()
             conndb.close()
             if user:
@@ -60,8 +69,7 @@ class ReqHandler(socketserver.StreamRequestHandler):
         else:
             return False
 
-
-class EchoServer(socketserver.ThreadingTCPServer):
+class PBStatServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
     def process_request(self, request, client_address):
@@ -70,7 +78,8 @@ class EchoServer(socketserver.ThreadingTCPServer):
 
 
 if __name__ == '__main__':
-    with EchoServer((HOST, PORT), ReqHandler) as server:
+    settings = Settings()
+    with PBStatServer(settings.address, ReqHandler) as server:
         # server.timeout = 1
         # server.handle_timeout()
         server.serve_forever()
