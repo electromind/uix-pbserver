@@ -44,7 +44,6 @@ class ReqHandler(socketserver.StreamRequestHandler):
     def request_manager(self, req: str):
         r = json.loads(req)
 
-
     def get_client_msg(self, buff):
         data = self.request.recv(buff)
 
@@ -56,8 +55,8 @@ class ReqHandler(socketserver.StreamRequestHandler):
 
     def auth(self, userkey: str):
         if is_valid_key(userkey):
-            conndb, cur = _get_db()
-
+            conndb = _get_db()
+            cur = conndb.cursor()
             user = cur.fetchone()
             conndb.close()
             if user:

@@ -18,7 +18,7 @@ def _get_db():
     if db_conn.is_connected():
         db_conn.autocommit = True
         cur = db_conn.cursor()
-        cur.execute("create table userkey(`key` varchar(32) null, column_2 int null);")
+        # cur.execute("create table userkey(`key` varchar(32) null, column_2 int null);")
         return db_conn
     else:
         return None
@@ -35,7 +35,7 @@ def get_whitelisted():
     else:
         cur = db.cursor()
 
-        cur.execute("SELECT `keys` FROM whitelist.users")
+        cur.execute("SELECT `key` FROM whitelist.userkey;")
         try:
             userlist = json.loads(cur.fetchall())
             return userlist
@@ -43,8 +43,9 @@ def get_whitelisted():
             print(err)
             return None
 
+
 def is_valid_key(key: str):
-    if key and (len(key) == 32 and re.match(r"^[A-Za-z0-9]*$", key)):
+    if key and len(key) == 32 and re.match(r"^[A-Za-z0-9]*$", key):
         return True
     else:
         return False
