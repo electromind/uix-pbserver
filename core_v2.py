@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
 import logging
-import json
 import socketserver
-from utils import get_whitelisted, is_valid_key, _get_db
+
+from settings import Settings
 from utils import Logger
 from utils import get_timestring as t_now
-from settings import Settings
+from utils import get_whitelisted, is_valid_key, _get_db
 
 
 class ReqHandler(socketserver.StreamRequestHandler):
     settings = Settings()
     log = Logger('core').get_log()
+
+    def __init__(self, request, client_address, server):
+        super().__init__(request, client_address, server=server)
+        self.whitelist = get_whitelisted
+
     def setup(self):
         print(self.client_address)
         addr = self.settings.address
-        whitelisted = get_whitelisted()
-        if whitelisted is None:
+
+        if self.whitelist is None:
             pass
         else:
-            self.whitelist = whitelisted
-            print(whitelisted)
+            print(self.whitelist)
 
     def finish(self):
         self.request.close()
@@ -41,8 +45,8 @@ class ReqHandler(socketserver.StreamRequestHandler):
         self.send_client_msg(msg)
         # self.log.info(f'{t_now()}Server responded to client: {self.client_address[0]}')
 
-    def request_manager(self, req: str):
-        r = json.loads(req)
+    # def request_manager(self, req: str):
+    #     r = json.loads(req)
 
     def get_client_msg(self, buff):
         data = self.request.recv(buff)
@@ -67,6 +71,7 @@ class ReqHandler(socketserver.StreamRequestHandler):
                 return False
         else:
             return False
+
 
 class PBStatServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
