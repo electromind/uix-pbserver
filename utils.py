@@ -9,6 +9,32 @@ import re
 import json
 
 
+class Logger(logging.Logger):
+    def __init__(self, name: str, loglevel=logging.INFO):
+        super().__init__(name=name, level=loglevel)
+        format('%(levelname)s %(message)s')
+        # self.__logger_format = '%(levelname)s %(message)s'
+        # if platform.system() == 'Windows':
+        #     separator = '\\'
+        # else:
+        #     separator = '/'
+        # # tmp = str(__file__).replace('.py', '_').split(separator)
+
+        self.__logfile_name = ''.join([name, get_datestring(), '.log'])
+        self.__logdir_path = pathlib.Path('\\'.join([os.path.dirname(__file__), 'log']))
+        if not os.path.exists(self.__logdir_path):
+            os.mkdir(self.__logdir_path)
+        self.__path_to_log = self.__logdir_path / self.__logfile_name
+
+        if not os.path.isfile(self.__path_to_log):
+            f = self.__path_to_log.open('w')
+            f.close()
+        logfile_handler = logging.FileHandler(filename=self.__path_to_log, encoding='utf-8')
+        self.addHandler(logfile_handler)
+        logstream = logging.StreamHandler()
+        self.addHandler(logstream)
+
+
 def _get_db():
     db_conn = db.connect(
         user='root',
@@ -17,7 +43,7 @@ def _get_db():
         host='localhost')
     if db_conn.is_connected():
         db_conn.autocommit = True
-        cur = db_conn.cursor()
+        # cur = db_conn.cursor()
         # cur.execute("create table userkey(`key` varchar(32) null, column_2 int null);")
         return db_conn
     else:
@@ -35,9 +61,9 @@ def get_whitelisted():
     else:
         cur = db.cursor()
 
-        cur.execute("SELECT `key` FROM whitelist.userkey;")
+        cur.execute("SELECT `account_key` FROM whitelist.user_keys")
         try:
-            userlist = json.loads(cur.fetchall())
+            userlist = json.dumps([x[0] for x in cur.fetchall()])
             return userlist
         except Exception as err:
             print(err)
@@ -54,50 +80,9 @@ def is_valid_key(key: str):
 def get_datestring():
     return datetime.strftime(datetime.now(), '%d-%m-%Y')
 
+
 def get_timestring():
     return datetime.strftime(datetime.now(), '%H:%M:%S:%f\t')
 
-
-class Logger:
-    def __init__(self, name: str):
-        self.__logger_format = '[%(asctime)s] [%(levelname)s]) %(message)s'
-        # self.__logger_format = '%(asctime)s  %(levelname)-9.9s %(message)-70.70s  %(module)s.py:%(lineno)d'
-        # self.__logger_date_format = '%d-%b-%y %H:%M:%S'
-        self.__logger_level = logging.INFO
-        if platform.system() == 'Windows':
-            separator = '\\'
-        else:
-            separator = '/'
-        tmp = str(__file__).replace('.py', '_').split(separator)
-        self.__name__ = ''.join([tmp[len(tmp) - 1], get_datestring(), '.log'])
-        self.__logfile_path = pathlib.Path('\\'.join([os.path.dirname(__file__), 'log']))
-        if not os.path.exists(self.__logfile_path):
-            os.mkdir(self.__logfile_path)
-        self.__path_to_log = self.__logfile_path / self.__name__
-        f = self.__path_to_log.open('w')
-        f.close()
-
-    def get_log(self, name=None, log_level=None, log_format=None, log_date_format=None):
-        if name is None:
-            name = self.__name__
-        if log_level is None:
-            log_level = self.__logger_level
-        if log_format is None:
-            log_format = self.__logger_format
-        # if log_date_format is None:
-        #     log_date_format = self.__logger_date_format
-        logging.basicConfig()
-        logger = logging.getLogger(name=name)
-        logger.setLevel(log_level)
-        formatter = logging.Formatter(log_format, log_date_format)
-        logfile = logging.FileHandler(filename=self.__path_to_log, encoding='utf-8')
-        logstream = logging.StreamHandler()
-        logger.addHandler(logfile)
-        logger.addHandler(logstream)
-
-        for handler in logger.handlers:
-            handler.setFormatter(formatter)
-            handler.setLevel(log_level)
-        return logger
 
 

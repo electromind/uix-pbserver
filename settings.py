@@ -2,6 +2,7 @@
 class Settings:
     def __init__(self, debug=True):
         self.__BUFFER_SIZE = 1024
+        self.wl_update_interval = 300
         if debug:
             self.__host = '10.0.1.5'
             self.__port = 2512
@@ -19,7 +20,7 @@ class Settings:
 
     @property
     def address(self):
-        return tuple([self.host, self.port])
+        return self.host, self.port
 
     @property
     def buff_size(self):

@@ -11,10 +11,7 @@ from utils import get_timestring as t_now
 sel = selectors.DefaultSelector()
 HOST = '10.0.1.5'
 PORT = 2512
-
-
-logger = Logger()
-log = logger.get_log()
+logger = Logger('multi')
 
 
 def get_db():
@@ -49,14 +46,14 @@ def auth(key: str):
         userkey = key.replace('auth_me', '')
     if is_valid_key(userkey):
         conndb, cur = get_db()
-        cur.execute('''SELECT * FROM user_keys WHERE account_key = %s''', (userkey,))
+        cur.execute('''SELECT account_key FROM user_keys''')
         user = cur.fetchone()
         conndb.close()
         if user:
-            log.info(f'Auth - OK: {userkey}')
+            logger.info(f'Auth - OK: {userkey}')
             return True
         else:
-            log.info(f'Auth - Fail: User: {userkey} is not whitelisted')
+            logger.info(f'Auth - Fail: User: {userkey} is not whitelisted')
             return False
 
 def service_connection(key, mask):
@@ -85,9 +82,9 @@ def service_connection(key, mask):
 
 lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 lsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-lsock.bind((host, port))
+lsock.bind((HOST, PORT))
 lsock.listen(128)
-print(f"{t_now()}listening on", (host, port))
+print(f"{t_now()}listening on", (HOST, PORT))
 lsock.setblocking(False)
 
 sel.register(lsock, selectors.EVENT_READ, data=None)

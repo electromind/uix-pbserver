@@ -1,56 +1,45 @@
 #!/usr/bin/env python3
 import logging
-import socketserver
-
-from settings import Settings
+from socketserver import StreamRequestHandler, BaseRequestHandler, ThreadingTCPServer, DatagramRequestHandler
+from datetime import datetime
+from settings import Settings as settings
+from pprint import pprint
 from utils import Logger
 from utils import get_timestring as t_now
 from utils import get_whitelisted, is_valid_key, _get_db
+logger = Logger('server_')
+app_data = settings()
+calls = 0
 
-
-class ReqHandler(socketserver.StreamRequestHandler):
-    settings = Settings()
-    log = Logger('core').get_log()
-
-    def __init__(self, request, client_address, server):
-        super().__init__(request, client_address, server=server)
-        self.whitelist = get_whitelisted
-
-    def setup(self):
-        print(self.client_address)
-        addr = self.settings.address
-
-        if self.whitelist is None:
-            pass
-        else:
-            print(self.whitelist)
+class ReqHandler(StreamRequestHandler):
 
     def finish(self):
         self.request.close()
 
     def handle(self):
-        msg = self.get_client_msg(self.settings.buff_size)
-        self.log.info(f'{t_now()}Client: {self.client_address[0]} sent data: {msg[:20]}')
+        global calls
+        calls += 1
+        msg = self.get_client_msg(app_data.buff_size)
+        logger.info(f'>request>\n{t_now()}client:\t{self.client_address[0]}')
 
-        if 'auth_me:' in msg:
-            userkey = msg.replace('auth_me:', '')
+        if 'auth#' in msg:
+            userkey = msg.replace('auth#', '')
             if self.auth(userkey):
                 self.send_client_msg('True')
             else:
                 self.send_client_msg('False')
-        elif '_online:' in msg:
+        elif 'online#' in msg:
             return self.send_client_msg('True')
-
-
-        self.send_client_msg(msg)
-        # self.log.info(f'{t_now()}Server responded to client: {self.client_address[0]}')
-
-    # def request_manager(self, req: str):
-    #     r = json.loads(req)
+        elif 'tx_stat#' in msg:
+            raw_tx_list = msg.replace('tx_stat#')
+            tx_list = raw_tx_list.split(';')
+            pprint(tx_list)
+        else:
+            return self.send_client_msg('False')
+        print(f"<<<")
 
     def get_client_msg(self, buff):
         data = self.request.recv(buff)
-
         return data.decode('utf-8')
 
     def send_client_msg(self, msg: str):
@@ -59,31 +48,42 @@ class ReqHandler(socketserver.StreamRequestHandler):
 
     def auth(self, userkey: str):
         if is_valid_key(userkey):
-            conndb = _get_db()
-            cur = conndb.cursor()
-            user = cur.fetchone()
-            conndb.close()
-            if user:
-                self.log.info(f'{t_now()}Auth - OK: {userkey}')
+
+            if userkey in self.server.wl:
+                logger.info(f'{t_now()}Auth - OK: {userkey}')
                 return True
             else:
-                self.log.info(f'{t_now()}Auth - Fail: User: {userkey} is not whitelisted')
+                logger.info(f'{t_now()}Auth - Fail: User: {userkey} is not whitelisted')
                 return False
         else:
             return False
 
 
-class PBStatServer(socketserver.ThreadingTCPServer):
-    allow_reuse_address = True
+class PBStatServer(ThreadingTCPServer):
+    def __init__(self, handler: ReqHandler, addr: tuple):
+        super().__init__(RequestHandlerClass=handler, server_address=addr)
+        self.log = Logger('server_')
+        self.request_queue_size = 12
+        self.timeout = 1
+        self.allow_reuse_address = True
+        self.log.info(f"{t_now()}Server started at: {addr}")
+        self.started = datetime.now().timestamp()
+        self.wl_last_update = datetime.now().timestamp()
+        self.wl = get_whitelisted()
+
+    def handle_timeout(self):
+        self.wl = get_whitelisted()
+        # self.handle_timeout()
+        print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!{t_now()} keys updated")
+
 
     def process_request(self, request, client_address):
-        logging.info('Connection from client %r', client_address)
+        logging.info(f'{t_now()}Connection from: %r', client_address)
         super().process_request(request, client_address)
 
 
 if __name__ == '__main__':
-    settings = Settings()
-    with PBStatServer(settings.address, ReqHandler) as server:
+    with PBStatServer(handler=ReqHandler, addr=app_data.address) as server:
         # server.timeout = 1
         # server.handle_timeout()
         server.serve_forever()
