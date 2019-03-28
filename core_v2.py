@@ -6,7 +6,7 @@ from settings import Settings as settings
 from pprint import pprint
 from utils import Logger
 from utils import get_timestring as t_now
-from utils import get_whitelisted, is_valid_key, _get_db
+from utils import get_whitelisted, is_valid_key, get_remote_keylist
 logger = Logger('server_')
 app_data = settings()
 calls = 0
@@ -31,9 +31,12 @@ class ReqHandler(StreamRequestHandler):
         elif 'online#' in msg:
             return self.send_client_msg('True')
         elif 'tx_stat#' in msg:
-            raw_tx_list = msg.replace('tx_stat#')
+            raw_tx_list = msg.replace('tx_stat#', '')
             tx_list = raw_tx_list.split(';')
             pprint(tx_list)
+        elif 'sync#' in msg:
+            userkey = msg.replace('sync#', '')
+            print(self.sync())
         else:
             return self.send_client_msg('False')
         print(f"<<<")
@@ -42,13 +45,15 @@ class ReqHandler(StreamRequestHandler):
         data = self.request.recv(buff)
         return data.decode('utf-8')
 
+    def sync(self):
+        return get_remote_keylist()
+
     def send_client_msg(self, msg: str):
         message = bytes(msg, encoding='utf-8')
         resp = self.request.send(message)
 
     def auth(self, userkey: str):
         if is_valid_key(userkey):
-
             if userkey in self.server.wl:
                 logger.info(f'{t_now()}Auth - OK: {userkey}')
                 return True

@@ -2,11 +2,12 @@ import logging
 import os
 import pathlib
 from datetime import datetime
-import platform
+import paramiko
 import mysql.connector as db
 import time
 import re
 import json
+import settings as s
 
 
 class Logger(logging.Logger):
@@ -75,6 +76,29 @@ def is_valid_key(key: str):
         return True
     else:
         return False
+
+
+def get_remote_keylist():
+    try:
+        pk = paramiko.RSAKey.from_private_key_file(
+            filename=os.getcwd() + s.WL_KEY_FILE_NAME,
+            password=s.WL_PASS
+        )
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(
+            hostname=s.WL_HOST,
+            username=s.WL_USER,
+            pkey=pk
+        )
+        sftp = ssh.open_sftp()
+        pk = json.load(sftp.open(s.WL_FILE_NAME))
+        key_list = (pk['ACCOUNT_KEY'])
+        ssh.close()
+
+        return key_list if key_list else None
+    except Exception as e:
+        print(f'Remote WL synchronization error.\n{e}')
 
 
 def get_datestring():

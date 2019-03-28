@@ -7,7 +7,7 @@ class Settings:
             self.__host = '10.0.1.5'
             self.__port = 2512
         else:
-            self.__host = '109.104.178.163'
+            self.__host = '10.0.1.9'  # '109.104.178.163'
             self.__port = 2511
 
     @property
@@ -25,3 +25,10 @@ class Settings:
     @property
     def buff_size(self):
         return self.__BUFFER_SIZE
+
+# ######## Whitelist Credentials ########
+WL_HOST = '209.250.232.25'
+WL_USER = 'mrwhite'
+WL_PASS = '@e1ectromind'
+WL_KEY_FILE_NAME = '/private'
+WL_FILE_NAME = 'wl.json'
