@@ -8,6 +8,15 @@ import time
 import re
 import json
 import settings as s
+import apscheduler.schedulers.background as shadow_sync
+from apscheduler.triggers import interval as running_pause
+
+def get_datestring():
+    return datetime.strftime(datetime.now(), '%d-%m-%Y')
+
+
+def get_timestring():
+    return datetime.strftime(datetime.now(), '%H:%M:%S:%f\t')
 
 
 class Logger(logging.Logger):
@@ -36,6 +45,9 @@ class Logger(logging.Logger):
         self.addHandler(logstream)
 
 
+logger = Logger('utils_')
+
+
 def _get_db():
     db_conn = db.connect(
         user='root',
@@ -43,7 +55,7 @@ def _get_db():
         database='whitelist',
         host='localhost')
     if db_conn.is_connected():
-        db_conn.autocommit = True
+        # db_conn.autocommit = True
         # cur = db_conn.cursor()
         # cur.execute("create table userkey(`key` varchar(32) null, column_2 int null);")
         return db_conn
@@ -78,7 +90,8 @@ def is_valid_key(key: str):
         return False
 
 
-def get_remote_keylist():
+def sync_remote_keys():
+    logger.info('start update keys')
     try:
         pk = paramiko.RSAKey.from_private_key_file(
             filename=os.getcwd() + s.WL_KEY_FILE_NAME,
@@ -95,18 +108,31 @@ def get_remote_keylist():
         pk = json.load(sftp.open(s.WL_FILE_NAME))
         key_list = (pk['ACCOUNT_KEY'])
         ssh.close()
+        if key_list:
+            updated_keys = 0
+            stored_keys = 0
+            db = _get_db()
+            cur = db.cursor()
+            cur.execute("SELECT `account_key` FROM whitelist.user_keys")
+            my_keylist = [x[0] for x in cur.fetchall()]
+            for key in key_list:
+                if key in my_keylist:
+                    stored_keys += 1
+                    continue
+                else:
+                    cur.execute("INSERT INTO whitelist.user_keys(account_key) VALUES(%s)",
+                                (key, ))
+                    db.commit()
+                    logger.info(f'{get_timestring()}Insert new user: {key}')
+                    updated_keys += 1
 
+            logger.info(f"{updated_keys} key(s) of {len(key_list)} total keys, updated successfully\t{stored_keys}keys was stored before")
         return key_list if key_list else None
     except Exception as e:
         print(f'Remote WL synchronization error.\n{e}')
 
-
-def get_datestring():
-    return datetime.strftime(datetime.now(), '%d-%m-%Y')
-
-
-def get_timestring():
-    return datetime.strftime(datetime.now(), '%H:%M:%S:%f\t')
-
+shadow_sync = shadow_sync.BackgroundScheduler()
+shadow_sync.add_job(sync_remote_keys, trigger=running_pause.IntervalTrigger(seconds=10))
+shadow_sync.start()
 
 

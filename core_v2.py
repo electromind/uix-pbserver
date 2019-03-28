@@ -6,7 +6,7 @@ from settings import Settings as settings
 from pprint import pprint
 from utils import Logger
 from utils import get_timestring as t_now
-from utils import get_whitelisted, is_valid_key, get_remote_keylist
+from utils import get_whitelisted, is_valid_key, sync_remote_keys
 logger = Logger('server_')
 app_data = settings()
 calls = 0
@@ -20,7 +20,7 @@ class ReqHandler(StreamRequestHandler):
         global calls
         calls += 1
         msg = self.get_client_msg(app_data.buff_size)
-        logger.info(f'>request>\n{t_now()}client:\t{self.client_address[0]}')
+        logger.info(f'>request>\n{t_now()}client:\t{self.client_address[0]}\t{msg}')
 
         if 'auth#' in msg:
             userkey = msg.replace('auth#', '')
@@ -46,7 +46,8 @@ class ReqHandler(StreamRequestHandler):
         return data.decode('utf-8')
 
     def sync(self):
-        return get_remote_keylist()
+        sync_remote_keys()
+
 
     def send_client_msg(self, msg: str):
         message = bytes(msg, encoding='utf-8')
