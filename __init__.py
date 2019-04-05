@@ -3,4 +3,4 @@ __about__ = {
     'email': 'electromind.work@gmail.com'
 }
 
-__version__ = "2.0"
+__version__ = "2.1"

@@ -22,7 +22,9 @@ def get_timestring():
 class Logger(logging.Logger):
     def __init__(self, name: str, loglevel=logging.INFO):
         super().__init__(name=name, level=loglevel)
-        format('%(levelname)s %(message)s')
+        FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
+        logging.basicConfig(format=FORMAT)
+        # logging.Formatter()
         # self.__logger_format = '%(levelname)s %(message)s'
         # if platform.system() == 'Windows':
         #     separator = '\\'
@@ -31,7 +33,7 @@ class Logger(logging.Logger):
         # # tmp = str(__file__).replace('.py', '_').split(separator)
 
         self.__logfile_name = ''.join([name, get_datestring(), '.log'])
-        self.__logdir_path = pathlib.Path('\\'.join([os.path.dirname(__file__), 'log']))
+        self.__logdir_path = pathlib.Path('/'.join([os.path.dirname(__file__), 'log']))
         if not os.path.exists(self.__logdir_path):
             os.mkdir(self.__logdir_path)
         self.__path_to_log = self.__logdir_path / self.__logfile_name
@@ -44,6 +46,7 @@ class Logger(logging.Logger):
         logstream = logging.StreamHandler()
         self.addHandler(logstream)
 
+sttngs = s.Settings()
 
 logger = Logger('utils_')
 
@@ -51,24 +54,20 @@ logger = Logger('utils_')
 def _get_db():
     db_conn = db.connect(
         user='root',
-        password='gigaset1',
+        password=sttngs.db_pass,
         database='whitelist',
         host='localhost')
     if db_conn.is_connected():
-        # db_conn.autocommit = True
-        # cur = db_conn.cursor()
-        # cur.execute("create table userkey(`key` varchar(32) null, column_2 int null);")
         return db_conn
     else:
         return None
 
 
 def get_whitelisted():
-    userlist = None
     db = _get_db()
     if db is None:
-        print(f'{get_timestring()}DB Connection Error')
-        print(f'{get_timestring()}5 sec to reconnect')
+        logger.info(f'{get_timestring()}\tDB Connection Error')
+        logger.info(f'{get_timestring()}\twaiting 5 sec to reconnect')
         time.sleep(5)
         _get_db()
     else:
@@ -76,10 +75,10 @@ def get_whitelisted():
 
         cur.execute("SELECT `account_key` FROM whitelist.user_keys")
         try:
-            userlist = json.dumps([x[0] for x in cur.fetchall()])
+            userlist = [x[0] for x in cur.fetchall()]
             return userlist
         except Exception as err:
-            print(err)
+            logger.info(f'{get_timestring()}\t{err}')
             return None
 
 
@@ -90,8 +89,15 @@ def is_valid_key(key: str):
         return False
 
 
+def insert_in_db(key, msg):
+    db = _get_db()
+    cur = db.cursor()
+    cur.execute("INSERT INTO whitelist.raw_tx (userkey, data) VALUES (%s, %s)", (key, msg))
+    db.commit()
+
+
 def sync_remote_keys():
-    logger.info('start update keys')
+    logger.info(f'{get_timestring()}\tstart update keys')
     try:
         pk = paramiko.RSAKey.from_private_key_file(
             filename=os.getcwd() + s.WL_KEY_FILE_NAME,
@@ -123,16 +129,14 @@ def sync_remote_keys():
                     cur.execute("INSERT INTO whitelist.user_keys(account_key) VALUES(%s)",
                                 (key, ))
                     db.commit()
-                    logger.info(f'{get_timestring()}Insert new user: {key}')
+                    logger.info(f'{get_timestring()}\t{get_timestring()}Insert new user: {key}')
                     updated_keys += 1
 
-            logger.info(f"{updated_keys} key(s) of {len(key_list)} total keys, updated successfully\t{stored_keys}keys was stored before")
+            logger.info(f'{get_timestring()}\t{updated_keys} key(s) of {len(key_list)} total keys, updated successfully\t{stored_keys}keys was stored before')
         return key_list if key_list else None
     except Exception as e:
-        print(f'Remote WL synchronization error.\n{e}')
+        logger.info(f'{get_timestring()}\tRemote WL synchronization error.\n{e}')
 
 shadow_sync = shadow_sync.BackgroundScheduler()
-shadow_sync.add_job(sync_remote_keys, trigger=running_pause.IntervalTrigger(seconds=10))
+shadow_sync.add_job(sync_remote_keys, trigger=running_pause.IntervalTrigger(minutes=5))
 shadow_sync.start()
-
-
