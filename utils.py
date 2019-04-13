@@ -12,16 +12,10 @@ import mysql.connector as db
 class Logger(logging.Logger):
     def __init__(self, name: str, loglevel=logging.INFO):
         super().__init__(name=name, level=loglevel)
-        format('%(levelname)s %(message)s')
-        # self.__logger_format = '%(levelname)s %(message)s'
-        # if platform.system() == 'Windows':
-        #     separator = '\\'
-        # else:
-        #     separator = '/'
-        # # tmp = str(__file__).replace('.py', '_').split(separator)
-
+        FORMAT = ('%(asctime)s %(levelname)s %(message)s')
+        self.__format__(FORMAT)
         self.__logfile_name = ''.join([name, get_datestring(), '.log'])
-        self.__logdir_path = pathlib.Path('\\'.join([os.path.dirname(__file__), 'log']))
+        self.__logdir_path = pathlib.Path('/'.join([os.path.dirname(__file__), 'log']))
         if not os.path.exists(self.__logdir_path):
             os.mkdir(self.__logdir_path)
         self.__path_to_log = self.__logdir_path / self.__logfile_name
@@ -38,7 +32,7 @@ class Logger(logging.Logger):
 def _get_db():
     db_conn = db.connect(
         user='root',
-        password='gigaset1',
+        password='password',
         database='whitelist',
         host='localhost')
     if db_conn.is_connected():
