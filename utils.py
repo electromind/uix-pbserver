@@ -1,12 +1,12 @@
+import json
 import logging
 import os
 import pathlib
-from datetime import datetime
-import platform
-import mysql.connector as db
-import time
 import re
-import json
+import time
+from datetime import datetime
+
+import mysql.connector as db
 
 
 class Logger(logging.Logger):
@@ -61,7 +61,7 @@ def get_whitelisted():
     else:
         cur = db.cursor()
 
-        cur.execute("SELECT `account_key` FROM whitelist.user_keys")
+        cur.execute("SELECT userkey FROM whitelist.users")
         try:
             userlist = json.dumps([x[0] for x in cur.fetchall()])
             return userlist

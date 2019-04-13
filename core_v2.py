@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 import logging
-from socketserver import StreamRequestHandler, BaseRequestHandler, ThreadingTCPServer, DatagramRequestHandler
 from datetime import datetime
-from settings import Settings as settings
 from pprint import pprint
+from socketserver import StreamRequestHandler, ThreadingTCPServer
+
+from settings import Settings as config
 from utils import Logger
 from utils import get_timestring as t_now
-from utils import get_whitelisted, is_valid_key, _get_db
+from utils import get_whitelisted, is_valid_key
+
 logger = Logger('server_')
-app_data = settings()
+app_data = config()
 calls = 0
+
 
 class ReqHandler(StreamRequestHandler):
 
@@ -44,7 +47,7 @@ class ReqHandler(StreamRequestHandler):
 
     def send_client_msg(self, msg: str):
         message = bytes(msg, encoding='utf-8')
-        resp = self.request.send(message)
+        self.request.send(message)
 
     def auth(self, userkey: str):
         if is_valid_key(userkey):
@@ -60,7 +63,7 @@ class ReqHandler(StreamRequestHandler):
 
 
 class PBStatServer(ThreadingTCPServer):
-    def __init__(self, handler: ReqHandler, addr: tuple):
+    def __init__(self, handler: type(ReqHandler), addr: tuple):
         super().__init__(RequestHandlerClass=handler, server_address=addr)
         self.log = Logger('server_')
         self.request_queue_size = 12
@@ -75,7 +78,6 @@ class PBStatServer(ThreadingTCPServer):
         self.wl = get_whitelisted()
         # self.handle_timeout()
         print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!{t_now()} keys updated")
-
 
     def process_request(self, request, client_address):
         logging.info(f'{t_now()}Connection from: %r', client_address)
