@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 class Settings:
-    def __init__(self, debug=False):
+    def __init__(self, debug=True):
         self.__BUFFER_SIZE = 1024
         self.wl_update_interval = 300
         if debug:
             self.__host = '10.0.1.5'
-            self.__port = 2512
+            self.__port = 5545
             self.db_pass = 'gigaset1'
         else:
-            self.__host = '10.0.1.9'  # '109.104.178.163'
+            self.__host = '10.0.1.10'
             self.__port = 2511
             self.db_pass = 'password'
 

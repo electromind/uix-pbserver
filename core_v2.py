@@ -11,7 +11,7 @@ from utils import get_whitelisted, is_valid_key, sync_remote_keys, insert_in_db
 logger = Logger('server_')
 FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT)
-app_data = settings(debug=False)
+app_data = settings(debug=True)
 calls = 0
 
 class ReqHandler(StreamRequestHandler):
@@ -77,6 +77,7 @@ class PBStatServer(ThreadingTCPServer):
         self.started = datetime.now().timestamp()
         self.wl_last_update = datetime.now().timestamp()
         self.wl = get_whitelisted()
+        sync_remote_keys()
 
     def handle_timeout(self):
         self.wl = get_whitelisted()

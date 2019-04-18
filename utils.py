@@ -73,7 +73,7 @@ def get_whitelisted():
     else:
         cur = db.cursor()
 
-        cur.execute("SELECT `account_key` FROM whitelist.user_keys")
+        cur.execute("SELECT userkey FROM whitelist.users")
         try:
             userlist = [x[0] for x in cur.fetchall()]
             return userlist
@@ -92,7 +92,7 @@ def is_valid_key(key: str):
 def insert_in_db(key, msg):
     db = _get_db()
     cur = db.cursor()
-    cur.execute("INSERT INTO whitelist.raw_tx (userkey, data) VALUES (%s, %s)", (key, msg))
+    cur.execute("INSERT INTO whitelist.raw_tx (userkeys, data) VALUES (%s, %s)", (key, msg))
     db.commit()
 
 
@@ -119,15 +119,14 @@ def sync_remote_keys():
             stored_keys = 0
             db = _get_db()
             cur = db.cursor()
-            cur.execute("SELECT `account_key` FROM whitelist.user_keys")
+            cur.execute("SELECT userkey FROM whitelist.users")
             my_keylist = [x[0] for x in cur.fetchall()]
             for key in key_list:
                 if key in my_keylist:
                     stored_keys += 1
                     continue
                 else:
-                    cur.execute("INSERT INTO whitelist.user_keys(account_key) VALUES(%s)",
-                                (key, ))
+                    cur.execute("INSERT INTO whitelist.users (userkey) VALUES(%s)", (key, ))
                     db.commit()
                     logger.info(f'{get_timestring()}\t{get_timestring()}Insert new user: {key}')
                     updated_keys += 1
